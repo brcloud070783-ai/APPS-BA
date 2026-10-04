@@ -73,15 +73,58 @@ export default function App() {
     setErrorMessage(null);
     let token = getCachedToken();
 
+    const generatePlainTextSPMK = () => {
+      return `${packageData.header.provinsi.toUpperCase()}
+${packageData.header.dinas.toUpperCase()}
+Alamat : ${packageData.header.alamat} | E-mail : ${packageData.header.email}
+
+SURAT PERINTAH MULAI KERJA (SPMK)
+Nomor : ${packageData.nomorSPMK || packageData.nomorSurat}
+Tanggal : ${packageData.tanggalSPMK || packageData.tanggalSurat}
+
+Paket Pekerjaan: ${packageData.paketPekerjaan}
+
+Yang bertandatangan di bawah ini:
+1. PPK      : ${packageData.ppk.nama} (NIP: ${packageData.ppk.nip})
+   Jabatan  : ${packageData.ppk.jabatan}
+
+berdasarkan SPK ${packageData.paketPekerjaan} nomor : ${packageData.nomorSPK} tanggal ${packageData.tanggalSPK}, memerintahkan:
+
+2. Penyedia : ${packageData.penyedia.namaPerusahaan}
+   Alamat   : ${packageData.penyedia.alamat}
+   Diwakili : ${packageData.penyedia.diwakiliOleh} (${packageData.penyedia.jabatanWakil})
+
+Ketentuan Pekerjaan:
+1. Paket Pengadaan : ${packageData.paketPekerjaan}
+2. Tanggal mulai kerja : ${packageData.tanggalMulaiKerja}
+3. Syarat-syarat pekerjaan : ${packageData.syaratPekerjaan}
+4. Waktu penyelesaian : Selama ${packageData.waktuPenyelesaianHari} (${packageData.waktuPenyelesaianTerbilang}) Hari Kalender (Selesai : ${packageData.tanggalSelesai})
+5. Denda : ${packageData.dendaKetentuan}
+
+${packageData.header.kota}, ${packageData.tanggalSPMK || packageData.tanggalSurat}
+PPK: ${packageData.ppk.nama} | Penyedia: ${packageData.penyedia.diwakiliOleh}`;
+    };
+
     if (!token || !user) {
       try {
         const loginRes = await signInWithGoogleWorkspace();
-        if (!loginRes) return;
-        token = loginRes.accessToken;
-        setUser(loginRes.user);
-        setNeedsAuth(false);
+        if (loginRes) {
+          token = loginRes.accessToken;
+          setUser(loginRes.user);
+          setNeedsAuth(false);
+        }
       } catch (e: any) {
-        setErrorMessage('Silakan login terlebih dahulu untuk mengekspor ke Google Docs.');
+        // Smooth Fallback for Vercel / External Domains
+        try {
+          await navigator.clipboard.writeText(generatePlainTextSPMK());
+        } catch (clipErr) {
+          console.warn('Clipboard write failed:', clipErr);
+        }
+        window.open('https://docs.google.com/document/u/0/create', '_blank');
+        setExportResult({
+          docId: 'google-docs-direct',
+          docUrl: 'https://docs.google.com/document/u/0/create'
+        });
         return;
       }
     }
@@ -94,9 +137,17 @@ export default function App() {
       setExportResult(result);
     } catch (err: any) {
       console.error('Google Docs export failed:', err);
-      setErrorMessage(
-        `Gagal mengekspor ke Google Docs: ${err.message || 'Periksa izin Google Workspace Anda.'}`
-      );
+      // Fallback open Google Docs
+      try {
+        await navigator.clipboard.writeText(generatePlainTextSPMK());
+      } catch (clipErr) {
+        console.warn('Clipboard write failed:', clipErr);
+      }
+      window.open('https://docs.google.com/document/u/0/create', '_blank');
+      setExportResult({
+        docId: 'google-docs-direct',
+        docUrl: 'https://docs.google.com/document/u/0/create'
+      });
     } finally {
       setIsExportingGoogle(false);
     }

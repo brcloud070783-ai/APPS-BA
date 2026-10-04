@@ -45,9 +45,9 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
   } catch (error: any) {
     console.error('Sign in error:', error);
     if (error?.code === 'auth/unauthorized-domain' || error?.message?.includes('unauthorized-domain')) {
-      // Automatic fallback for custom Vercel / external domains
-      window.open('https://docs.google.com/document/u/0/create', '_blank');
-      throw new Error(`Domain '${window.location.hostname}' belum terdaftar di Firebase Authorized Domains. Google Docs baru telah dibuka secara langsung untuk Anda!`);
+      const customErr: any = new Error(`UNAUTHORIZED_DOMAIN:${window.location.hostname}`);
+      customErr.code = 'auth/unauthorized-domain';
+      throw customErr;
     }
     throw error;
   } finally {
